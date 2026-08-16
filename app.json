@@ -39,6 +39,12 @@
         }
       ],
       "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "LensUP necesita acceder a tus fotos para crear tu perfil profesional."
+        }
+      ],
       "expo-image",
       "expo-sqlite",
       "expo-status-bar",

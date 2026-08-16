@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session, User } from "@supabase/supabase-js";
 import {
+  useCallback,
   createContext,
   useContext,
   useEffect,
@@ -17,14 +18,65 @@ type AuthContextValue = {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  onboardingRequired: boolean;
+  refreshProfileStatus: () => Promise<boolean>;
   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+type OnboardingProfile = {
+  avatar_url: string | null;
+  roles: string[] | string | null;
+  city: string | null;
+  bio: string | null;
+};
+
+function hasCompletedOnboarding(profile: OnboardingProfile | null) {
+  const roles = Array.isArray(profile?.roles)
+    ? profile.roles
+    : typeof profile?.roles === "string"
+      ? profile.roles.split(",").map((role) => role.trim()).filter(Boolean)
+      : [];
+
+  return Boolean(
+    profile?.avatar_url?.trim() &&
+      roles.length > 0 &&
+      profile?.city?.trim() &&
+      (profile?.bio?.trim().length ?? 0) >= 40,
+  );
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboardingRequired, setOnboardingRequired] = useState(false);
+
+  const loadProfileStatus = useCallback(async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("avatar_url, roles, city, bio")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("No pudimos comprobar el onboarding:", error.message);
+      setOnboardingRequired(false);
+      return false;
+    }
+
+    const completed = hasCompletedOnboarding(
+      (data as OnboardingProfile | null) ?? null,
+    );
+    setOnboardingRequired(!completed);
+    return completed;
+  }, []);
+
+  const refreshProfileStatus = useCallback(async () => {
+    const userId = session?.user.id;
+    if (!userId) return false;
+    return loadProfileStatus(userId);
+  }, [loadProfileStatus, session?.user.id]);
 
   useEffect(() => {
     let mounted = true;
@@ -60,7 +112,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     supabase.auth
       .getSession()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (!mounted) return;
 
         if (error) {
@@ -69,7 +121,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         setSession(data.session);
         void persistPendingLegalConsent(data.session);
-        setLoading(false);
+
+        if (data.session) {
+          await loadProfileStatus(data.session.user.id);
+        } else {
+          setOnboardingRequired(false);
+        }
+
+        if (mounted) setLoading(false);
       })
       .catch((error) => {
         console.error("Error inesperado recuperando la sesión:", error);
@@ -81,14 +140,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       void persistPendingLegalConsent(nextSession);
-      setLoading(false);
+
+      if (nextSession) {
+        setLoading(true);
+        void loadProfileStatus(nextSession.user.id).finally(() => {
+          if (mounted) setLoading(false);
+        });
+      } else {
+        setOnboardingRequired(false);
+        setLoading(false);
+      }
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadProfileStatus]);
 
   useEffect(() => {
     const userId = session?.user?.id;
@@ -136,9 +204,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       session,
       user: session?.user ?? null,
       loading,
+      onboardingRequired,
+      refreshProfileStatus,
       signOut,
     }),
-    [session, loading]
+    [session, loading, onboardingRequired, refreshProfileStatus]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

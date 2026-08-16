@@ -101,9 +101,9 @@ function useNotificationNavigation(sessionReady: boolean) {
 }
 
 function RootNavigator() {
-  const { session, loading } = useAuth();
+  const { session, loading, onboardingRequired } = useAuth();
 
-  useNotificationNavigation(Boolean(session) && !loading);
+  useNotificationNavigation(Boolean(session) && !loading && !onboardingRequired);
 
   if (loading) {
     return (
@@ -122,7 +122,11 @@ function RootNavigator() {
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
 
-        <Stack.Protected guard={Boolean(session)}>
+        <Stack.Protected guard={Boolean(session) && onboardingRequired}>
+          <Stack.Screen name="onboarding" />
+        </Stack.Protected>
+
+        <Stack.Protected guard={Boolean(session) && !onboardingRequired}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="project/[id]" />
           <Stack.Screen name="edit-profile" />
