@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -101,13 +101,6 @@ export default function ProfileScreen() {
     }
   }
 
-  function showComingSoon(label: string) {
-    Alert.alert(
-      label,
-      "Esta sección ya quedó preparada y la conectaremos en el siguiente paso.",
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -122,7 +115,7 @@ export default function ProfileScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Configuración"
-            onPress={() => showComingSoon("Configuración")}
+            onPress={() => router.push("/settings" as Href)}
             style={({ pressed }) => [
               styles.iconButton,
               pressed && styles.pressed,
@@ -171,7 +164,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.statusCard}>
+        <Pressable onPress={() => router.push("/edit-profile" as Href)} style={({ pressed }) => [styles.statusCard, pressed && styles.pressed]}>
           <View style={styles.statusCardLeft}>
             <View
               style={[
@@ -192,7 +185,7 @@ export default function ProfileScreen() {
           </View>
 
           <Ionicons name="chevron-forward" size={19} color="#77777C" />
-        </View>
+        </Pressable>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tu actividad</Text>
@@ -217,46 +210,28 @@ export default function ProfileScreen() {
             <MenuDivider />
 
             <MenuItem
+              icon="people-outline"
+              title="Talentos"
+              subtitle="Descubrí profesionales audiovisuales"
+              onPress={() => router.push("/talents")}
+            />
+
+            <MenuDivider />
+
+            <MenuItem
               icon="person-outline"
-              title="Mi perfil profesional"
-              subtitle="Portfolio, experiencia, equipo y disponibilidad"
-              onPress={() => showComingSoon("Mi perfil profesional")}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>LensUP</Text>
-
-          <View style={styles.menuCard}>
-            <MenuItem
-              icon="sparkles-outline"
-              title="LensUP Score"
-              subtitle="Completá tu perfil y mejorá tu visibilidad"
-              badge="82%"
-              onPress={() => showComingSoon("LensUP Score")}
+              title="Editar mi perfil"
+              subtitle="Nombre, bio, contacto y disponibilidad"
+              onPress={() => router.push("/edit-profile" as Href)}
             />
 
             <MenuDivider />
 
             <MenuItem
-              icon="car-outline"
-              title="Locomoción"
-              subtitle={
-                profile?.has_transport
-                  ? "Marcado: contás con locomoción"
-                  : "Indicá si contás con locomoción"
-              }
-              onPress={() => showComingSoon("Locomoción")}
-            />
-
-            <MenuDivider />
-
-            <MenuItem
-              icon="shield-checkmark-outline"
-              title="Verified Gear"
-              subtitle="Equipamiento destacado o verificado"
-              onPress={() => showComingSoon("Verified Gear")}
+              icon="eye-outline"
+              title="Ver mi perfil público"
+              subtitle="Así te ven los demás usuarios"
+              onPress={() => user && router.push(`/profile/${user.id}`)}
             />
           </View>
         </View>

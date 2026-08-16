@@ -1,14 +1,17 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session, User } from "@supabase/supabase-js";
 import {
-    createContext,
-    useContext,
-    useEffect,
-    useMemo,
-    useState,
-    type PropsWithChildren,
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type PropsWithChildren,
 } from "react";
 
 import { supabase } from "../lib/supabase";
+import { PENDING_CONSENT_KEY } from "../constants/legal";
+import { registerForPushNotifications } from "../services/notifications";
 
 type AuthContextValue = {
   session: Session | null;
@@ -26,6 +29,35 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let mounted = true;
 
+    async function persistPendingLegalConsent(nextSession: Session | null) {
+      if (!nextSession) return;
+
+      const serializedConsent = await AsyncStorage.getItem(PENDING_CONSENT_KEY);
+      if (!serializedConsent) return;
+
+      try {
+        const consent = JSON.parse(serializedConsent) as {
+          termsVersion?: string;
+          privacyVersion?: string;
+          source?: string;
+        };
+
+        if (!consent.termsVersion || !consent.privacyVersion) return;
+
+        const { error } = await supabase.rpc("accept_legal_documents", {
+          p_terms_version: consent.termsVersion,
+          p_privacy_version: consent.privacyVersion,
+          p_source: consent.source || "ios",
+        });
+
+        if (!error) {
+          await AsyncStorage.removeItem(PENDING_CONSENT_KEY);
+        }
+      } catch (error) {
+        console.warn("No pudimos guardar el consentimiento legal:", error);
+      }
+    }
+
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
@@ -36,6 +68,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
 
         setSession(data.session);
+        void persistPendingLegalConsent(data.session);
         setLoading(false);
       })
       .catch((error) => {
@@ -47,6 +80,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
+      void persistPendingLegalConsent(nextSession);
       setLoading(false);
     });
 
@@ -55,6 +89,39 @@ export function AuthProvider({ children }: PropsWithChildren) {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+
+    if (!userId) return;
+
+    const authenticatedUserId = userId;
+
+    let cancelled = false;
+
+    async function registerDevice() {
+      try {
+        const result = await registerForPushNotifications(authenticatedUserId);
+
+        if (!cancelled && !result.ok) {
+          console.log("Push token no registrado:", result.reason);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error(
+            "Error inesperado registrando notificaciones push:",
+            error
+          );
+        }
+      }
+    }
+
+    registerDevice();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
 
   async function signOut() {
     const { error } = await supabase.auth.signOut();

@@ -32,11 +32,15 @@ type Profile = {
   has_transport: boolean | null;
 };
 
+type ApplicationStatus = "pending" | "accepted" | "rejected";
+
 type Application = {
   id: string;
   created_at: string;
   project_id: string;
   profile_id: string;
+  status: ApplicationStatus | null;
+  accepted_at: string | null;
   profile?: Profile;
 };
 
@@ -110,7 +114,7 @@ export default function ProjectApplicantsScreen() {
       const { data: applicationRows, error: applicationsError } =
         await supabase
           .from("applications")
-          .select("id, created_at, project_id, profile_id")
+          .select("id, created_at, project_id, profile_id, status, accepted_at")
           .eq("project_id", projectId)
           .order("created_at", { ascending: false });
 
@@ -286,7 +290,9 @@ function ApplicantCard({
 }) {
   const profile = application.profile;
   const [accepting, setAccepting] = useState(false);
-  const [accepted, setAccepted] = useState(false);
+  const [accepted, setAccepted] = useState(
+    application.status === "accepted",
+  );
 
   const roles = formatList(profile?.roles);
   const kit = formatList(profile?.kit);
@@ -297,20 +303,49 @@ function ApplicantCard({
 
     setAccepting(true);
 
-    const { error } = await supabase.from("notifications").insert({
-      user_id: profile.id,
-      title: "🎉 Fuiste seleccionado",
-      message: `Te seleccionaron para "${project.title || "un proyecto"}".`,
-      type: "accepted",
-      link: "/my-applications",
-    });
+    const acceptedAt = new Date().toISOString();
+
+    const { error: applicationError } = await supabase
+      .from("applications")
+      .update({
+        status: "accepted",
+        accepted_at: acceptedAt,
+      })
+      .eq("id", application.id)
+      .eq("project_id", project.id);
+
+    if (applicationError) {
+      setAccepting(false);
+      Alert.alert(
+        "No pudimos seleccionar al postulante",
+        applicationError.message,
+      );
+      return;
+    }
+
+    const { error: notificationError } = await supabase
+      .from("notifications")
+      .insert({
+        user_id: profile.id,
+        title: "🎉 Fuiste seleccionado",
+        message: `Te seleccionaron para "${project.title || "un proyecto"}". Ya podés contactar a quien publicó la oportunidad.`,
+        type: "accepted",
+        link: `/project/${project.id}`,
+      });
 
     setAccepting(false);
 
-    if (error) {
+    if (notificationError) {
+      console.error(
+        "La postulación fue aceptada, pero falló la notificación:",
+        notificationError,
+      );
+
+      setAccepted(true);
+
       Alert.alert(
-        "No pudimos seleccionar al postulante",
-        error.message,
+        "Postulante seleccionado",
+        "La selección quedó guardada, pero no pudimos crear la notificación.",
       );
       return;
     }
@@ -319,7 +354,7 @@ function ApplicantCard({
 
     Alert.alert(
       "Postulante seleccionado",
-      "El profesional recibió una notificación.",
+      "El profesional recibió una notificación y ya puede contactarte.",
     );
   }
 
@@ -413,10 +448,7 @@ function ApplicantCard({
         {profile?.id && (
           <Pressable
             onPress={() =>
-              Alert.alert(
-                "Perfil profesional",
-                "La pantalla completa del profesional será el próximo paso.",
-              )
+              router.push(`/profile/${profile.id}` as never)
             }
             style={({ pressed }) => [
               styles.secondaryButton,

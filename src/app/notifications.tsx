@@ -73,6 +73,19 @@ function getNotificationIcon(type: string | null) {
 function resolveMobileLink(link: string | null) {
   if (!link) return null;
 
+  const normalizedLink = link.trim();
+
+  const projectMatch = normalizedLink.match(
+    /^\/(?:project|projects|opportunities)\/([^/?#]+)/,
+  );
+
+  if (projectMatch?.[1]) {
+    return {
+      pathname: "/project/[id]" as const,
+      params: { id: decodeURIComponent(projectMatch[1]) },
+    };
+  }
+
   const routes: Record<string, string> = {
     "/dashboard": "/(tabs)",
     "/projects": "/(tabs)",
@@ -81,7 +94,7 @@ function resolveMobileLink(link: string | null) {
     "/my-projects": "/my-projects",
   };
 
-  return routes[link] ?? link;
+  return routes[normalizedLink] ?? normalizedLink;
 }
 
 export default function NotificationsScreen() {

@@ -1,17 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { LensUpSplash } from "../../components/LensUpSplash";
-
 export default function TabsLayout() {
-  const [showSplash, setShowSplash] = useState(true);
-
-  const handleSplashFinish = useCallback(() => {
-    setShowSplash(false);
-  }, []);
-
   return (
     <View style={styles.container}>
       <Tabs
@@ -61,8 +52,6 @@ export default function TabsLayout() {
           }}
         />
       </Tabs>
-
-      {showSplash && <LensUpSplash onFinish={handleSplashFinish} />}
     </View>
   );
 }

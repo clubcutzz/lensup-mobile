@@ -1,3 +1,4 @@
+import { Link } from "expo-router";
 import { useState } from "react";
 import {
     ActivityIndicator,
@@ -13,6 +14,7 @@ import {
 } from "react-native";
 
 import { supabase } from "../../lib/supabase";
+import { PASSWORD_RECOVERY_URL } from "../../constants/legal";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -48,6 +50,30 @@ export default function LoginScreen() {
     }
   }
 
+  async function handleForgotPassword() {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      Alert.alert("Ingresá tu email", "Lo necesitamos para enviarte el enlace de recuperación.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: PASSWORD_RECOVERY_URL,
+      });
+
+      if (error) throw error;
+
+      Alert.alert("Revisá tu email", "Te enviamos un enlace para elegir una contraseña nueva.");
+    } catch {
+      Alert.alert("No pudimos enviar el enlace", "Intentá nuevamente en unos minutos.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -78,6 +104,10 @@ export default function LoginScreen() {
               />
             </View>
 
+            <Pressable onPress={handleForgotPassword} disabled={submitting}>
+              <Text style={styles.forgotPassword}>Olvidé mi contraseña</Text>
+            </Pressable>
+
             <View style={styles.field}>
               <Text style={styles.label}>Contraseña</Text>
 
@@ -107,6 +137,10 @@ export default function LoginScreen() {
                 <Text style={styles.primaryButtonText}>Iniciar sesión</Text>
               )}
             </Pressable>
+
+            <Link href="/register" style={styles.registerLink}>
+              ¿No tenés cuenta? Crear cuenta
+            </Link>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -174,6 +208,20 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 16,
     backgroundColor: "#FFFFFF",
+  },
+  forgotPassword: {
+    marginTop: -8,
+    color: "#C7A7FF",
+    textAlign: "right",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  registerLink: {
+    paddingVertical: 10,
+    color: "#C7A7FF",
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "700",
   },
   primaryButtonText: {
     color: "#080808",

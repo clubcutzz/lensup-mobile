@@ -25,6 +25,7 @@ type ProjectRow = {
   city: string | null;
   event_date: string | null;
   budget: string | number | null;
+  description: string | null;
   urgent: boolean | null;
   created_at: string | null;
 };
@@ -81,13 +82,21 @@ function mapProjectToOpportunity(project: ProjectRow): Opportunity {
     location: project.city?.trim() || "Ubicación a coordinar",
     date: formatDate(project.event_date),
     budget: formatBudget(project.budget),
+    durationHours: 0,
     urgent: Boolean(project.urgent),
+    client: "Cliente LensUP",
+    description:
+      project.description?.trim() || "Abrí la oportunidad para ver todos los detalles.",
     match: 90,
     reasons: [
       "Coincide con tu ubicación",
       "Es compatible con tu perfil",
       "Oportunidad publicada recientemente",
     ],
+    tags: (project.role || "")
+      .split(",")
+      .map((role) => role.trim())
+      .filter(Boolean),
   };
 }
 
@@ -150,7 +159,7 @@ export default function HomeScreen() {
     const { data, error } = await supabase
       .from("projects")
       .select(
-        "id, title, role, city, event_date, budget, urgent, created_at",
+        "id, title, role, city, event_date, budget, description, urgent, created_at",
       )
       .order("created_at", { ascending: false });
 

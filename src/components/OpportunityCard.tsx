@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import type { ComponentProps } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { Opportunity } from "../data/opportunities";
@@ -8,18 +9,140 @@ type OpportunityCardProps = {
   onPress?: () => void;
 };
 
+type IoniconName = ComponentProps<typeof Ionicons>["name"];
+
+function normalizeRole(role: string) {
+  return role
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function getRoleIcon(role: string): IoniconName {
+  const normalizedRole = normalizeRole(role);
+
+  if (
+    normalizedRole.includes("fotograf") ||
+    normalizedRole.includes("foto")
+  ) {
+    return "camera-outline";
+  }
+
+  if (
+    normalizedRole.includes("video") ||
+    normalizedRole.includes("filmmaker") ||
+    normalizedRole.includes("camarograf") ||
+    normalizedRole.includes("operador de camara")
+  ) {
+    return "videocam-outline";
+  }
+
+  if (
+    normalizedRole.includes("sonido") ||
+    normalizedRole.includes("audio") ||
+    normalizedRole.includes("microfon")
+  ) {
+    return "mic-outline";
+  }
+
+  if (
+    normalizedRole.includes("ilumin") ||
+    normalizedRole.includes("gaffer") ||
+    normalizedRole.includes("electrico")
+  ) {
+    return "bulb-outline";
+  }
+
+  if (
+    normalizedRole.includes("edicion") ||
+    normalizedRole.includes("editor") ||
+    normalizedRole.includes("montaj")
+  ) {
+    return "cut-outline";
+  }
+
+  if (
+    normalizedRole.includes("color") ||
+    normalizedRole.includes("postprodu")
+  ) {
+    return "color-palette-outline";
+  }
+
+  if (
+    normalizedRole.includes("drone") ||
+    normalizedRole.includes("piloto")
+  ) {
+    return "airplane-outline";
+  }
+
+  if (
+    normalizedRole.includes("produccion") ||
+    normalizedRole.includes("productor")
+  ) {
+    return "clipboard-outline";
+  }
+
+  if (
+    normalizedRole.includes("direccion") ||
+    normalizedRole.includes("director")
+  ) {
+    return "megaphone-outline";
+  }
+
+  if (
+    normalizedRole.includes("stream") ||
+    normalizedRole.includes("multicamara")
+  ) {
+    return "radio-outline";
+  }
+
+  if (
+    normalizedRole.includes("maquill") ||
+    normalizedRole.includes("styling")
+  ) {
+    return "brush-outline";
+  }
+
+  return "aperture-outline";
+}
+
 export function OpportunityCard({
   opportunity,
   onPress,
 }: OpportunityCardProps) {
+  const projectRoles = opportunity.category
+    .split(",")
+    .map((role) => role.trim())
+    .filter(Boolean);
+
+  const visibleRole =
+    projectRoles.length > 0 ? projectRoles[0] : "Rol audiovisual";
+
   return (
     <View style={styles.card}>
       <View style={styles.visual}>
         <View style={styles.glowLarge} />
         <View style={styles.glowSmall} />
 
-        <View style={styles.cameraIcon}>
-          <Ionicons name="videocam" size={34} color="#FFFFFF" />
+        <View style={styles.rolesContainer}>
+          <View style={styles.roleItem}>
+            <View style={styles.roleIcon}>
+              <Ionicons
+                name={getRoleIcon(visibleRole)}
+                size={20}
+                color="#FFFFFF"
+              />
+            </View>
+
+            <Text
+              style={styles.roleLabel}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {visibleRole}
+            </Text>
+          </View>
         </View>
 
         {opportunity.urgent && (
@@ -30,16 +153,9 @@ export function OpportunityCard({
       </View>
 
       <View style={styles.content}>
-        <View style={styles.headingRow}>
-          <View style={styles.headingContent}>
-            <Text style={styles.category}>{opportunity.category}</Text>
-            <Text style={styles.title}>{opportunity.title}</Text>
-          </View>
-
-          <View style={styles.matchBadge}>
-            <Ionicons name="sparkles" size={13} color="#C4A7FF" />
-            <Text style={styles.matchText}>{opportunity.match}%</Text>
-          </View>
+        <View style={styles.headingContent}>
+          <Text style={styles.category}>{opportunity.category}</Text>
+          <Text style={styles.title}>{opportunity.title}</Text>
         </View>
 
         <View style={styles.metadata}>
@@ -56,22 +172,6 @@ export function OpportunityCard({
 
         <Text style={styles.budget}>{opportunity.budget}</Text>
 
-        <View style={styles.divider} />
-
-        <Text style={styles.whyTitle}>Por qué encaja con vos</Text>
-
-        <View style={styles.reasons}>
-          {opportunity.reasons.slice(0, 3).map((reason) => (
-            <View key={reason} style={styles.reason}>
-              <View style={styles.check}>
-                <Ionicons name="checkmark" size={11} color="#0A0A0A" />
-              </View>
-
-              <Text style={styles.reasonText}>{reason}</Text>
-            </View>
-          ))}
-        </View>
-
         <View style={styles.actionRow}>
           <Pressable
             onPress={onPress}
@@ -82,17 +182,6 @@ export function OpportunityCard({
           >
             <Text style={styles.primaryButtonText}>Ver proyecto</Text>
             <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Guardar oportunidad"
-            style={({ pressed }) => [
-              styles.favoriteButton,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            <Ionicons name="heart-outline" size={21} color="#FFFFFF" />
           </Pressable>
         </View>
       </View>
@@ -109,7 +198,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#121212",
   },
   visual: {
-    height: 190,
+    height: 104,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -117,36 +206,54 @@ const styles = StyleSheet.create({
   },
   glowLarge: {
     position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     backgroundColor: "#5521A7",
-    opacity: 0.3,
-    transform: [{ translateX: 70 }, { translateY: -20 }],
+    opacity: 0.1,
+    transform: [{ translateX: 75 }, { translateY: -25 }],
   },
   glowSmall: {
     position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     backgroundColor: "#9A4DFF",
-    opacity: 0.22,
-    transform: [{ translateX: -70 }, { translateY: 60 }],
+    opacity: 0.08,
+    transform: [{ translateX: -85 }, { translateY: 55 }],
   },
-  cameraIcon: {
-    width: 76,
-    height: 76,
+  rolesContainer: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  roleItem: {
+    width: "100%",
+    alignItems: "center",
+  },
+  roleIcon: {
+    width: 42,
+    height: 42,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#7651A8",
-    borderRadius: 24,
-    backgroundColor: "rgba(12, 12, 14, 0.76)",
+    borderRadius: 14,
+    backgroundColor: "rgba(12, 12, 14, 0.78)",
+  },
+  roleLabel: {
+    maxWidth: "88%",
+    marginTop: 6,
+    color: "#E3D6FF",
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "center",
   },
   urgentBadge: {
     position: "absolute",
-    top: 16,
-    right: 16,
+    top: 12,
+    right: 12,
     borderWidth: 1,
     borderColor: "#7F2430",
     borderRadius: 999,
@@ -161,12 +268,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.7,
   },
   content: {
-    padding: 20,
-  },
-  headingRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
+    padding: 18,
   },
   headingContent: {
     flex: 1,
@@ -181,25 +283,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#FFFFFF",
-    fontSize: 23,
+    fontSize: 25,
     fontWeight: "800",
     letterSpacing: -0.5,
-  },
-  matchBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    borderWidth: 1,
-    borderColor: "#43345B",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    backgroundColor: "#21192E",
-  },
-  matchText: {
-    color: "#D8C6FF",
-    fontSize: 12,
-    fontWeight: "800",
   },
   metadata: {
     flexDirection: "row",
@@ -222,51 +308,17 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
   },
-  divider: {
-    height: 1,
-    marginVertical: 18,
-    backgroundColor: "#28282B",
-  },
-  whyTitle: {
-    color: "#D3D3D7",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  reasons: {
-    gap: 10,
-    marginTop: 12,
-  },
-  reason: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-  },
-  check: {
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 9,
-    backgroundColor: "#A676FF",
-  },
-  reasonText: {
-    flex: 1,
-    color: "#A9A9AE",
-    fontSize: 13,
-  },
   actionRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 22,
+    marginTop: 20,
   },
   primaryButton: {
-    flex: 1,
-    height: 52,
+    width: "100%",
+    height: 56,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 9,
-    borderRadius: 16,
+    borderRadius: 18,
     backgroundColor: "#712BE3",
   },
   primaryButtonText: {
@@ -274,17 +326,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
   },
-  favoriteButton: {
-    width: 52,
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#333337",
-    borderRadius: 16,
-    backgroundColor: "#19191B",
-  },
   buttonPressed: {
     opacity: 0.78,
+    transform: [{ scale: 0.98 }],
   },
 });
