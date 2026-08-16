@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -62,6 +63,7 @@ export default function OnboardingScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [imageUri, setImageUri] = useState("");
+  const [imageMimeType, setImageMimeType] = useState("image/jpeg");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [fullName, setFullName] = useState("");
   const [roles, setRoles] = useState<string[]>([]);
@@ -145,6 +147,7 @@ export default function OnboardingScreen() {
 
     if (!result.canceled && result.assets[0]?.uri) {
       setImageUri(result.assets[0].uri);
+      setImageMimeType(result.assets[0].mimeType || "image/jpeg");
     }
   }
 
@@ -191,12 +194,13 @@ export default function OnboardingScreen() {
   async function uploadAvatar() {
     if (!imageUri || !user) return avatarUrl;
 
-    const response = await fetch(imageUri);
-    const file = await response.arrayBuffer();
-    const filePath = `${user.id}/${Date.now()}.jpg`;
-    const { error } = await supabase.storage.from("avatars").upload(filePath, file, {
-      contentType: "image/jpeg",
-      upsert: true,
+    const localFile = new File(imageUri);
+    const fileBytes = await localFile.arrayBuffer();
+    const extension = imageMimeType === "image/png" ? "png" : "jpg";
+    const filePath = `${user.id}/${Date.now()}.${extension}`;
+    const { error } = await supabase.storage.from("avatars").upload(filePath, fileBytes, {
+      contentType: imageMimeType,
+      upsert: false,
     });
 
     if (error) throw error;
@@ -211,12 +215,10 @@ export default function OnboardingScreen() {
 
     try {
       setSaving(true);
-      const uploadedAvatarUrl = await uploadAvatar();
       const normalizedWhatsapp = whatsapp.replace(/\D/g, "").replace(/^0+/, "");
-      const { error } = await supabase
+      const { data: savedProfile, error: profileError } = await supabase
         .from("profiles")
         .update({
-          avatar_url: uploadedAvatarUrl,
           full_name: fullName.trim(),
           roles: selectedRoles,
           headline: headline.trim() || selectedRoles.join(" · "),
@@ -227,19 +229,44 @@ export default function OnboardingScreen() {
           has_transport: hasTransport,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", user.id);
+        .eq("id", user.id)
+        .select("id")
+        .maybeSingle();
 
-      if (error) throw error;
+      if (profileError) throw new Error(`profile:${profileError.message}`);
+      if (!savedProfile) throw new Error("profile:No encontramos el perfil asociado a esta cuenta.");
+
+      const uploadedAvatarUrl = await uploadAvatar().catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`avatar:${message}`);
+      });
+
+      const { data: savedAvatar, error: avatarProfileError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: uploadedAvatarUrl })
+        .eq("id", user.id)
+        .select("id")
+        .maybeSingle();
+
+      if (avatarProfileError) throw new Error(`avatar:${avatarProfileError.message}`);
+      if (!savedAvatar) throw new Error("avatar:No pudimos asociar la foto al perfil.");
 
       const completed = await refreshProfileStatus();
-      if (!completed) throw new Error("El perfil no quedó completo.");
+      if (!completed) throw new Error("verify:El perfil no quedó completo.");
 
       router.replace("/");
     } catch (error) {
       console.error("No pudimos completar el onboarding:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      const [stage, detail] = message.split(/:(.*)/s);
+      const descriptions: Record<string, string> = {
+        avatar: "Guardamos tus datos, pero no pudimos subir la foto. Elegí otra imagen e intentá nuevamente.",
+        profile: "No pudimos guardar los datos del perfil.",
+        verify: "Guardamos los datos, pero no pudimos verificar que el perfil esté completo.",
+      };
       Alert.alert(
         "No pudimos guardar tu perfil",
-        "Revisá tu conexión e intentá nuevamente.",
+        `${descriptions[stage] || "Ocurrió un error al guardar el perfil."}${detail ? `\n\nDetalle: ${detail}` : ""}`,
       );
     } finally {
       setSaving(false);
@@ -371,7 +398,7 @@ function Field({ label, style, ...props }: FieldProps) {
 }
 
 function Toggle({ label, value, onValueChange }: { label: string; value: boolean; onValueChange: (value: boolean) => void }) {
-  return <View style={styles.toggle}><Text style={styles.toggleLabel}>{label}</Text><Switch value={value} onValueChange={onValueChange} trackColor={{ false: "#333", true: "#7048A7" }} thumbColor={value ? "#C7A7FF" : "#AAA"} /></View>;
+  return <View style={styles.toggle}><Text style={styles.toggleLabel}>{label}</Text><View style={styles.switchContainer}><Switch value={value} onValueChange={onValueChange} trackColor={{ false: "#333", true: "#7048A7" }} thumbColor={value ? "#C7A7FF" : "#AAA"} style={styles.switchControl} /></View></View>;
 }
 
 const styles = StyleSheet.create({
@@ -402,8 +429,10 @@ const styles = StyleSheet.create({
   label: { color: "#D4D4D8", fontSize: 14, fontWeight: "700" },
   input: { minHeight: 55, borderWidth: 1, borderColor: "#2B2B2F", borderRadius: 16, paddingHorizontal: 16, backgroundColor: "#121214", color: "#FFFFFF", fontSize: 16 },
   bioInput: { minHeight: 130, paddingTop: 15, textAlignVertical: "top" },
-  toggle: { minHeight: 64, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#29292D", borderRadius: 17, paddingHorizontal: 17, backgroundColor: "#121214" },
-  toggleLabel: { color: "#E4E4E7", fontSize: 15, fontWeight: "700" },
+  toggle: { minHeight: 72, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#29292D", borderRadius: 17, paddingLeft: 17, paddingRight: 12, backgroundColor: "#121214" },
+  toggleLabel: { flex: 1, paddingRight: 16, color: "#E4E4E7", fontSize: 15, fontWeight: "700" },
+  switchContainer: { width: 54, height: 40, alignItems: "center", justifyContent: "center" },
+  switchControl: { transform: [{ scale: 0.86 }] },
   readyCard: { flexDirection: "row", gap: 14, borderWidth: 1, borderColor: "#473065", borderRadius: 18, padding: 18, backgroundColor: "#1A1224" },
   readyCopy: { flex: 1 },
   readyTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
