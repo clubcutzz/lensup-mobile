@@ -39,6 +39,18 @@ export default function TabsLayout() {
         />
 
         <Tabs.Screen
+          name="publish"
+          options={{
+            title: "Publicar",
+            tabBarIcon: ({ color, size, focused }) => (
+              <View style={[styles.publishIcon, focused && styles.publishIconActive]}>
+                <Ionicons name="add" color={focused ? "#080808" : color} size={size} />
+              </View>
+            ),
+          }}
+        />
+
+        <Tabs.Screen
           name="profile"
           options={{
             title: "Perfil",
@@ -60,5 +72,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#080808",
+  },
+  publishIcon: {
+    width: 36,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    backgroundColor: "#21162F",
+  },
+  publishIconActive: {
+    backgroundColor: "#A765FF",
   },
 });

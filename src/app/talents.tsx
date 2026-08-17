@@ -75,15 +75,8 @@ function shuffleTalents(items: TalentProfile[]) {
   return shuffled;
 }
 
-function isProfileReadyForDiscovery(profile: TalentProfile) {
-  const hasName = Boolean(profile.full_name?.trim());
-  const hasHeadline = Boolean(profile.headline?.trim());
-  const hasCity = Boolean(profile.city?.trim());
-  const hasPresentation = Boolean(
-    profile.avatar_url?.trim() || profile.bio?.trim(),
-  );
-
-  return hasName && hasHeadline && hasCity && hasPresentation;
+function isProfileVisible(profile: TalentProfile) {
+  return Boolean(profile.full_name?.trim());
 }
 
 export default function TalentsScreen() {
@@ -125,11 +118,11 @@ export default function TalentsScreen() {
       };
     });
 
-    const readyProfiles = (
+    const visibleProfiles = (
       (profilesResult.data ?? []) as TalentProfile[]
-    ).filter(isProfileReadyForDiscovery);
+    ).filter(isProfileVisible);
 
-    setTalents(shuffleTalents(readyProfiles));
+    setTalents(shuffleTalents(visibleProfiles));
     setReviewsByProfile(summaries);
     setLoading(false);
     setRefreshing(false);
@@ -267,12 +260,12 @@ export default function TalentsScreen() {
             <Ionicons name="people-outline" size={34} color="#8D63C7" />
             <Text style={styles.emptyTitle}>
               {talents.length === 0
-                ? "Todavía no hay perfiles listos"
+                ? "Todavía no hay profesionales registrados"
                 : "No encontramos talentos"}
             </Text>
             <Text style={styles.emptyText}>
               {talents.length === 0
-                ? "Los profesionales aparecerán acá cuando completen su nombre, especialidad, ciudad y presentación."
+                ? "Los profesionales aparecerán acá cuando creen su perfil en LensUP."
                 : "Probá con otra búsqueda o seleccioná un filtro diferente."}
             </Text>
 

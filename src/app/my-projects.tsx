@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -250,9 +250,18 @@ export default function MyProjectsScreen() {
               Todavía no publicaste proyectos
             </Text>
             <Text style={styles.messageText}>
-              Cuando publiques uno desde LensUP Web, aparecerá acá junto con
-              sus postulantes.
+              Creá tu primera oportunidad desde la app y revisá acá sus
+              postulantes.
             </Text>
+            <Pressable
+              style={({ pressed }) => [
+                styles.primaryButton,
+                pressed && styles.pressed,
+              ]}
+              onPress={() => router.push("/publish" as Href)}
+            >
+              <Text style={styles.primaryButtonText}>Publicar proyecto</Text>
+            </Pressable>
           </View>
         ) : (
           <View style={styles.cards}>

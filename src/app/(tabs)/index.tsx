@@ -60,6 +60,21 @@ function formatBudget(value: string | number | null) {
     return "A convenir";
   }
 
+  if (value === "A convenir") {
+    return value;
+  }
+
+  if (typeof value === "string" && value.includes(":")) {
+    const [currency, amount] = value.split(":");
+    const numericAmount = Number(amount);
+
+    if (!Number.isNaN(numericAmount)) {
+      const symbol = currency === "USD" ? "US$" : "$U";
+      const locale = currency === "USD" ? "en-US" : "es-UY";
+      return `${symbol} ${numericAmount.toLocaleString(locale)}`;
+    }
+  }
+
   const normalized =
     typeof value === "number"
       ? value
