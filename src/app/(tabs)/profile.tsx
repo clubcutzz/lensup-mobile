@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Platform,
   Pressable,
   SafeAreaView,
@@ -221,8 +222,30 @@ export default function ProfileScreen() {
             <MenuItem
               icon="person-outline"
               title="Editar mi perfil"
-              subtitle="Nombre, bio, contacto y disponibilidad"
+              subtitle="Actualizá tus datos en secciones simples"
               onPress={() => router.push("/edit-profile" as Href)}
+            />
+
+            <MenuDivider />
+
+            <MenuItem
+              icon="images-outline"
+              title="Mi portfolio"
+              subtitle="Tus trabajos y proyectos destacados"
+              onPress={() =>
+                Alert.alert(
+                  "Mi portfolio",
+                  "Próximamente, para modificar tu portfolio debés hacerlo desde la web de LensUP.",
+                  [
+                    { text: "Ahora no", style: "cancel" },
+                    {
+                      text: "Abrir LensUP web",
+                      onPress: () =>
+                        Linking.openURL("https://www.lensup.network/profile"),
+                    },
+                  ],
+                )
+              }
             />
 
             <MenuDivider />

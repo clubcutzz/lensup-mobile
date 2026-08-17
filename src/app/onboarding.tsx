@@ -19,21 +19,10 @@ import {
   View,
 } from "react-native";
 
+import CityPicker from "../components/CityPicker";
+import { buildProfessionalTitle, PROFILE_ROLES } from "../constants/profile";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
-
-const ROLE_OPTIONS = [
-  "Fotógrafo",
-  "Videógrafo",
-  "Editor",
-  "Operador de drone",
-  "Operador de streaming",
-  "Sonidista",
-  "Iluminador",
-  "Productor",
-  "Asistente",
-  "Otro",
-];
 
 const STEPS = ["Foto", "Roles", "Contacto", "Presentación", "Disponibilidad"];
 
@@ -41,7 +30,6 @@ type ProfileDraft = {
   avatar_url: string | null;
   full_name: string | null;
   roles: string[] | string | null;
-  headline: string | null;
   city: string | null;
   whatsapp: string | null;
   bio: string | null;
@@ -70,7 +58,6 @@ export default function OnboardingScreen() {
   const [customRole, setCustomRole] = useState("");
   const [city, setCity] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [headline, setHeadline] = useState("");
   const [bio, setBio] = useState("");
   const [isAvailable, setIsAvailable] = useState(true);
   const [hasTransport, setHasTransport] = useState(false);
@@ -81,7 +68,7 @@ export default function OnboardingScreen() {
     supabase
       .from("profiles")
       .select(
-        "avatar_url, full_name, roles, headline, city, whatsapp, bio, is_available, has_transport",
+        "avatar_url, full_name, roles, city, whatsapp, bio, is_available, has_transport",
       )
       .eq("id", user.id)
       .maybeSingle()
@@ -93,10 +80,10 @@ export default function OnboardingScreen() {
         const profile = (data as ProfileDraft | null) ?? null;
         const savedRoles = toRoles(profile?.roles);
         const predefinedRoles = savedRoles.filter((role) =>
-          ROLE_OPTIONS.includes(role),
+          PROFILE_ROLES.includes(role as (typeof PROFILE_ROLES)[number]),
         );
         const savedCustomRole = savedRoles.find(
-          (role) => !ROLE_OPTIONS.includes(role),
+          (role) => !PROFILE_ROLES.includes(role as (typeof PROFILE_ROLES)[number]),
         );
 
         setAvatarUrl(profile?.avatar_url ?? "");
@@ -111,7 +98,6 @@ export default function OnboardingScreen() {
           ...(savedCustomRole ? ["Otro"] : []),
         ]);
         setCustomRole(savedCustomRole ?? "");
-        setHeadline(profile?.headline ?? "");
         setCity(profile?.city ?? "");
         setWhatsapp(profile?.whatsapp ?? "");
         setBio(profile?.bio ?? "");
@@ -221,7 +207,7 @@ export default function OnboardingScreen() {
         .update({
           full_name: fullName.trim(),
           roles: selectedRoles,
-          headline: headline.trim() || selectedRoles.join(" · "),
+          headline: buildProfessionalTitle(selectedRoles),
           city: city.trim(),
           whatsapp: normalizedWhatsapp || null,
           bio: bio.trim(),
@@ -318,7 +304,7 @@ export default function OnboardingScreen() {
           {step === 1 && (
             <Step title="¿Cuál es tu rol?" subtitle="Podés seleccionar más de uno.">
               <View style={styles.chips}>
-                {ROLE_OPTIONS.map((role) => {
+                {PROFILE_ROLES.map((role) => {
                   const selected = roles.includes(role);
                   return (
                     <Pressable key={role} onPress={() => toggleRole(role)} style={[styles.chip, selected && styles.chipSelected]}>
@@ -335,7 +321,7 @@ export default function OnboardingScreen() {
 
           {step === 2 && (
             <Step title="¿Dónde trabajás?" subtitle="Esto ayuda a mostrarte oportunidades cercanas.">
-              <Field label="Ciudad" value={city} onChangeText={setCity} placeholder="Montevideo" autoCapitalize="words" />
+              <CityPicker value={city} onChange={setCity} />
               <Field label="WhatsApp (opcional)" value={whatsapp} onChangeText={setWhatsapp} placeholder="099 123 456" keyboardType="phone-pad" />
             </Step>
           )}
@@ -343,7 +329,11 @@ export default function OnboardingScreen() {
           {step === 3 && (
             <Step title="Contanos sobre vos" subtitle="Una buena presentación mejora tus posibilidades de conectar.">
               <Field label="Nombre completo" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
-              <Field label="Título profesional (opcional)" value={headline} onChangeText={setHeadline} placeholder="Ej: Directora de fotografía" />
+              <View style={styles.generatedField}>
+                <Text style={styles.label}>Título profesional</Text>
+                <Text style={styles.generatedValue}>{buildProfessionalTitle(selectedRoles)}</Text>
+                <Text style={styles.generatedHint}>Se genera automáticamente con tus roles.</Text>
+              </View>
               <Field label={`Bio · ${bio.trim().length}/40 mínimo`} value={bio} onChangeText={setBio} placeholder="Contá tu experiencia, estilo y el tipo de proyectos que buscás." multiline style={styles.bioInput} />
             </Step>
           )}
@@ -428,6 +418,9 @@ const styles = StyleSheet.create({
   field: { gap: 8 },
   label: { color: "#D4D4D8", fontSize: 14, fontWeight: "700" },
   input: { minHeight: 55, borderWidth: 1, borderColor: "#2B2B2F", borderRadius: 16, paddingHorizontal: 16, backgroundColor: "#121214", color: "#FFFFFF", fontSize: 16 },
+  generatedField: { gap: 8 },
+  generatedValue: { minHeight: 55, paddingHorizontal: 16, paddingVertical: 16, borderWidth: 1, borderColor: "#302841", borderRadius: 16, backgroundColor: "#17131D", color: "#D8C6F7", fontSize: 16, fontWeight: "700" },
+  generatedHint: { color: "#77777C", fontSize: 12 },
   bioInput: { minHeight: 130, paddingTop: 15, textAlignVertical: "top" },
   toggle: { minHeight: 72, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#29292D", borderRadius: 17, paddingLeft: 17, paddingRight: 12, backgroundColor: "#121214" },
   toggleLabel: { flex: 1, paddingRight: 16, color: "#E4E4E7", fontSize: 15, fontWeight: "700" },
