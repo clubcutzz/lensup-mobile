@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Linking,
   Platform,
   Pressable,
@@ -323,33 +324,7 @@ function ApplicantCard({
       return;
     }
 
-    const { error: notificationError } = await supabase
-      .from("notifications")
-      .insert({
-        user_id: profile.id,
-        title: "🎉 Fuiste seleccionado",
-        message: `Te seleccionaron para "${project.title || "un proyecto"}". Ya podés contactar a quien publicó la oportunidad.`,
-        type: "accepted",
-        link: `/project/${project.id}`,
-      });
-
     setAccepting(false);
-
-    if (notificationError) {
-      console.error(
-        "La postulación fue aceptada, pero falló la notificación:",
-        notificationError,
-      );
-
-      setAccepted(true);
-
-      Alert.alert(
-        "Postulante seleccionado",
-        "La selección quedó guardada, pero no pudimos crear la notificación.",
-      );
-      return;
-    }
-
     setAccepted(true);
 
     Alert.alert(
@@ -380,14 +355,22 @@ function ApplicantCard({
     <View style={styles.applicantCard}>
       <View style={styles.applicantHeader}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {profile?.full_name
-              ?.split(" ")
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((name) => name[0]?.toUpperCase())
-              .join("") || "LU"}
-          </Text>
+          {profile?.avatar_url ? (
+            <Image
+              source={{ uri: profile.avatar_url }}
+              resizeMode="cover"
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={styles.avatarText}>
+              {profile?.full_name
+                ?.split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((name) => name[0]?.toUpperCase())
+                .join("") || "LU"}
+            </Text>
+          )}
         </View>
 
         <View style={styles.applicantInfo}>
@@ -635,6 +618,11 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "800",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
   },
   applicantInfo: {
     flex: 1,
