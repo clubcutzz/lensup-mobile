@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "lensup",
+    "name": "LensUP",
     "slug": "lensup",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,6 +11,7 @@
       "icon": "./assets/icon.png",
       "bundleIdentifier": "com.lensup.lensup",
       "infoPlist": {
+        "CFBundleDisplayName": "LensUP",
         "ITSAppUsesNonExemptEncryption": false
       }
     },

@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
+import AnimatedLaunchScreen from "../components/AnimatedLaunchScreen";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 
 type NotificationData = {
@@ -117,7 +118,14 @@ function RootNavigator() {
     <>
       <StatusBar style="light" />
 
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: "fade",
+          animationDuration: 220,
+          contentStyle: { backgroundColor: "#080808" },
+        }}
+      >
         <Stack.Protected guard={!session}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
@@ -139,13 +147,20 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
+    <View style={styles.app}>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
+      <AnimatedLaunchScreen />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  app: {
+    flex: 1,
+    backgroundColor: "#080808",
+  },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
