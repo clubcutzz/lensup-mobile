@@ -21,6 +21,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { applyToProject } from "../../lib/applyToProject";
 import { supabase } from "../../lib/supabase";
+import SafetyActions from "../../components/SafetyActions";
 
 type Project = {
   id: string;
@@ -534,7 +535,13 @@ export default function ProjectDetailScreen() {
           </Text>
         </Pressable>
 
-        <View style={styles.headerPlaceholder} />
+        <SafetyActions
+          targetUserId={project.owner_id}
+          contentType="project"
+          contentId={project.id}
+          targetLabel={creator?.full_name?.trim() || "este usuario"}
+          onBlocked={() => router.back()}
+        />
       </View>
 
       <ScrollView

@@ -35,6 +35,10 @@ export default function SettingsScreen() {
   return <SafeAreaView style={styles.safeArea}><View style={styles.content}>
     <View style={styles.header}><Pressable onPress={() => router.back()} style={styles.iconButton}><Ionicons name="arrow-back" size={22} color="#FFF" /></Pressable><Text style={styles.title}>Configuración</Text><View style={styles.spacer} /></View>
     <View style={styles.card}>
+      <Row icon="help-circle-outline" label="Soporte y contacto" onPress={() => Linking.openURL("https://www.lensup.network/")} />
+      <View style={styles.divider} />
+      <Row icon="ban-outline" label="Usuarios bloqueados" onPress={() => router.push("/blocked-users" as never)} />
+      <View style={styles.divider} />
       <Row icon="document-text-outline" label="Términos y condiciones" onPress={() => Linking.openURL(TERMS_URL)} />
       <View style={styles.divider} />
       <Row icon="shield-checkmark-outline" label="Política de privacidad" onPress={() => Linking.openURL(PRIVACY_URL)} />

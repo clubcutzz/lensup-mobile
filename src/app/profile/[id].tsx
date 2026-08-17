@@ -19,6 +19,7 @@ import {
 
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../lib/supabase";
+import SafetyActions from "../../components/SafetyActions";
 
 type ProfileRow = {
   id: string;
@@ -359,7 +360,13 @@ export default function PublicProfileScreen() {
             </Text>
           </Pressable>
 
-          <View style={styles.headerPlaceholder} />
+          <SafetyActions
+            targetUserId={profile.id}
+            contentType="profile"
+            contentId={profile.id}
+            targetLabel={displayName}
+            onBlocked={() => router.back()}
+          />
         </View>
 
         <View style={styles.profileHeader}>
